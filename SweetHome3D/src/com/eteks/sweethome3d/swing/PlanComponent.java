@@ -2002,14 +2002,41 @@ public class PlanComponent extends JComponent implements PlanView, Scrollable, P
     }
     return strokeWidth;
   }
-  
+    /**
+     * Prints this component plan with all visible levels at the scale given in the home print attributes or at a scale
+     * that makes it fill <code>pageFormat</code> imageable size if this attribute is <code>null</code>.
+     */
+  public int print(Graphics g, PageFormat pageFormat, int pageIndex) {
+      Home old = this.home;
+      Level restoredLevel = this.home.getSelectedLevel();
+      int pageExists = NO_SUCH_PAGE;
+      try {
+          int currentPage = 0;
+          for (Level level : old.getLevels()) {
+              if (level.isViewable() && currentPage == pageIndex) {
+                  old.setSelectedLevel(level);
+                  pageExists = old_print(g, pageFormat, 0);
+                  break;
+              }
+              currentPage++;
+          }
+      }
+      finally
+      {
+          old.setSelectedLevel(restoredLevel);
+      }
+    return pageExists;
+
+  }
   /**
    * Prints this component plan at the scale given in the home print attributes or at a scale 
    * that makes it fill <code>pageFormat</code> imageable size if this attribute is <code>null</code>.
    */
-  public int print(Graphics g, PageFormat pageFormat, int pageIndex) {
+  public int old_print(Graphics g, PageFormat pageFormat, int pageIndex) {
     List<Selectable> printedItems = getPaintedItems(); 
     Rectangle2D printedItemBounds = getItemsBounds(g, printedItems);
+    Home old = this.home;
+    Level restoredLevel = this.home.getSelectedLevel();
     if (printedItemBounds != null) {
       double imageableX = pageFormat.getImageableX();
       double imageableY = pageFormat.getImageableY();
@@ -2023,7 +2050,7 @@ public class PlanComponent extends JComponent implements PlanView, Scrollable, P
       if (this.home.getPrint() == null || this.home.getPrint().getPlanScale() == null) {
         // Compute a scale that ensures the plan will fill the component if plan scale is null
         printScale = getPrintPreferredScale(g, pageFormat) * LengthUnit.centimeterToInch(72);
-        if (pageIndex > 0) {
+        if (pageIndex > this.home.getLevels().size() - 1) {
           return NO_SUCH_PAGE;
         }
         pagesPerRow = 1;
